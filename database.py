@@ -25,7 +25,7 @@ class Database:
         #Todo initialize the hub id from database
         self.hub_id = None
 
-    def get_devices(self, hub_id):
+    def get_devices(self):
         """
         Returns all the devices that can be managed by a hub.
         This function will take care of syncing with server if needed.
@@ -33,7 +33,7 @@ class Database:
         self._sync()
         return self.devices
 
-    def get_rules(self, hub_id):
+    def get_rules(self):
         """
         Returns all the rules that are associated with devices that can be managed by a hub.
         This function will take care of syncing with server if needed.
