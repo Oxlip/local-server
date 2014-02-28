@@ -15,10 +15,13 @@ class RestClient:
 
     def connect(self):
         """
-        Makes connection to the server and reterives the channel id for notification.
+        Makes connection to the server and retrieves the channel id for notification.
         """
         url = '{base}/hub/{hub_id}/connect'.format(base=REST_SERVER_BASE, hub_id=self.hub_id)
         r = requests.get(url)
+        if r.status_code != requests.codes.ok:
+            return None
+
         json_result = r.json()
         #todo parse the JSON and get the channel id
 
@@ -28,9 +31,13 @@ class RestClient:
         """
         Makes REST call to server to fetch the device list associated with the user.
         """
-        url = '{base}/hub/{hub_id}/'.format(base=REST_SERVER_BASE, hub_id=self.hub_id)
+        url = '{base}/hub/{hub_id}/devices'.format(base=REST_SERVER_BASE, hub_id=self.hub_id)
         r = requests.get(url)
+        if r.status_code != requests.codes.ok:
+            return None
+
         json_result = r.json()
         #todo parse the JSON and return list of devices
+
         return []
 
