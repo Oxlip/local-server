@@ -17,8 +17,8 @@ class HubInfo(Base):
     Only one record exists.
     """
     __tablename__ = 'hub_info'
-    id = Column(Integer, primary_key=True)
-    identification = Column(String(50))
+    identification = Column(String(50), primary_key=True)
+    hub_id = Column(Integer)
     profile_id = Column(Integer)
     last_sync_time = Column(DateTime)
 
@@ -63,7 +63,14 @@ class Rule(Base):
     id = Column(Integer, primary_key=True)
 
 
-def create_tables(engine):
+def drop_tables(engine):
+    """
+    Drops all the tables in the database.
+    """
+    Base.metadata.drop_all(engine)
+
+
+def init_tables(engine):
     """
     Creates all table structures in the database.
     """
