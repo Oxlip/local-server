@@ -1,33 +1,61 @@
+#!/usr/bin/env python
+
 """
 The main program which binds everything else.
 """
+import signal
+import sys
 import argparse
-from database import Database
+import logging
+from database import Database, reset_tables
 from rest_client import RestClient
 from notifications import start_notification_thread
-
-verbose_level = 0
-
 
 def process_command_line():
     """
     Process command line arguments and assign to appropriate variable
     """
-    global verbose_level
     parser = argparse.ArgumentParser(description='PlugZ Hub.')
     parser.add_argument('--verbose', default=0, help='Increases the logging amount.')
-    args = parser.parse_args()
-    verbose_level = args.verbose
+    parser.add_argument('--factory-reset', default=0, help='Erases the hub configuration.')
+    return parser.parse_args()
+
+
+def get_hub_identity():
+    """
+    Reads IDPROM and returns hub identifier
+    """
+    # TODO - implement reading from beaglebone IDPROM
+    # For now this is a test data (same as backend/models/ExampleData.SQL)
+    return 'AABBCCDDEEG2'
+
+
+def signal_handler(signal, frame):
+    logging.info('Ctl+C signal receive - Terminating PlugZ-Hub.')
+    sys.exit(0)
 
 
 def main():
-    process_command_line()
+    args = process_command_line()
 
-    db = Database()
-    rc = RestClient(db.hub_id)
-    channel_id = rc.connect()
-    notification_thread = start_notification_thread(channel_id)
-    notification_thread.join()
+    hub_identity = get_hub_identity()
+    rest_client = RestClient(hub_identity)
 
+    if args.factory_reset:
+        logging.info('Resetting device information')
+        reset_tables(hub_identity, rest_client.hub_id)
+
+    db = Database(rest_client)
+
+    notification_thread = start_notification_thread(rest_client.channel_id)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+    #loop until somebody presses q or ctrl+c
+    chr = sys.stdin.read(1)
+    while chr != 'q':
+        chr = sys.stdin.read(1)
+
+    logging.info('Terminating PlugZ-Hub.')
 
 main()
