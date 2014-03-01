@@ -36,5 +36,5 @@ def _notification_received(message):
     """
     When a notification arrives this function is called to process the message.
     """
-    print 'Notification from pubnub = ' + message
+    print 'Notification from pubnub = ' + str(message)
     return True
