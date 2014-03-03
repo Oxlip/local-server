@@ -5,7 +5,7 @@ The notifications may be also a command(turn on light), rule update...
 
 import PubNub
 import threading
-
+from device_handler import handle_server_command
 
 def start_notification_thread(channel_id):
     """
@@ -28,13 +28,5 @@ def _start_notifications(channel_id):
                            ssl_on=False)
     pubnub.subscribe({
         'channel': channel_id,
-        'callback': _notification_received
+        'callback': handle_server_command
     })
-
-
-def _notification_received(message):
-    """
-    When a notification arrives this function is called to process the message.
-    """
-    print 'Notification from pubnub = ' + str(message)
-    return True
