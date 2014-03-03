@@ -27,7 +27,7 @@ def get_hub_identity():
     """
     # TODO - implement reading from beaglebone IDPROM
     # For now this is a test data (same as backend/models/ExampleData.SQL)
-    return 'AABBCCDDEEG2'
+    return 'AABBCCDDEEG2', 'AUTH_KEY IS EMPTY'
 
 
 def signal_handler(signal, frame):
@@ -37,9 +37,10 @@ def signal_handler(signal, frame):
 
 def main():
     args = process_command_line()
+    logging.basicConfig(level=int(args.verbose))
 
-    hub_identity = get_hub_identity()
-    rest_client = RestClient(hub_identity)
+    hub_identity, authentication_key = get_hub_identity()
+    rest_client = RestClient(hub_identity, authentication_key)
 
     if args.factory_reset:
         logging.info('Resetting device information')

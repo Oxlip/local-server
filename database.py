@@ -4,6 +4,7 @@ Note - The ORM is done in database_declarative.py
 """
 
 from datetime import datetime
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_declarative import HubInfo, Device, Rule, create_db_session, init_tables, drop_tables
@@ -16,7 +17,7 @@ def reset_tables(identification, hub_id):
     """
     Initialize the tables to factory reset condition.
     """
-    engine = create_engine(DATABASE_FILE_NAME, echo=True)
+    engine = create_engine(DATABASE_FILE_NAME, echo=False)
     # Drop table and create them again
     drop_tables(engine)
     init_tables(engine)
@@ -33,7 +34,7 @@ class Database:
     """
 
     def __init__(self, rest_client, sync_interval=60):
-        self.engine = create_engine(DATABASE_FILE_NAME, echo=True)
+        self.engine = create_engine(DATABASE_FILE_NAME, echo=False)
         self.devices = []
         self.rules = []
         self.last_sync_time = datetime.now()
@@ -69,8 +70,10 @@ class Database:
 
         # TODO - sync the database by using REST calls to the server
         r_devices = self.rest_client.get_devices()
+
+        logging.info('Device information synched with server:')
         for r_device in r_devices:
-            print r_device
+            logging.info(r_device)
 
         # fill the object list from database
         self.devices = self.session.query(Device).all()
