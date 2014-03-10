@@ -10,6 +10,7 @@ import logging
 from database import Database, reset_tables
 from rest_client import RestClient
 from notifications import start_notification_thread
+import device_handler
 
 def process_command_line():
     """
@@ -47,6 +48,7 @@ def main():
         reset_tables(hub_identity, rest_client.hub_id)
 
     db = Database(rest_client)
+    device_handler.rest_client = rest_client
 
     notification_thread = start_notification_thread(rest_client.channel_id)
 

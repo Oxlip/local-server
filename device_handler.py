@@ -5,6 +5,7 @@ send status messages received from devices to server.
 import logging
 from ServerCommands import ServerCommands
 
+rest_client = None
 
 def _set_device_status(device_id, value):
     """
@@ -14,7 +15,7 @@ def _set_device_status(device_id, value):
     """
 
     #XXX - For debugging loop back
-    handle_device_update(device_id, value)
+    handle_device_update(device_id, 1, value)
 
     return
 
@@ -65,6 +66,15 @@ def handle_server_command(message):
     return True
 
 
-def handle_device_update(device_identification, status):
-    logging.info('Status update from device :{0} {1}'.format(device_identification, status))
+def handle_device_update(device_id, status, time_range):
+    """
+    When a device status(motion detected, lamp on etc) is changed it should be send to server.
+    The server then send the status to interested parties.
+
+    This function will be called by coap stack.
+    """
+    global rest_client
+
+    logging.info('Status update from device :{0} {1}'.format(device_id, status))
+    rest_client.send_device_status(device_id, time_range, status)
 

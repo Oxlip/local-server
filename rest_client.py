@@ -4,6 +4,7 @@ REST client to access the remote server. Provides APIs to access remote server.
 """
 
 import requests
+from datetime import datetime
 import plugz_exceptions
 
 #REST_SERVER_BASE = 'http://162.243.204.9/backend/api/v1'
@@ -36,3 +37,18 @@ class RestClient:
             return None
 
         return r.json()['devices']
+
+    def send_device_status(self, device_id, time_range, value):
+        """
+        Makes REST call to server to update a change in a device's value
+        """
+        params = {
+            'device_id': device_id,
+            'timestamp': datetime.now(),
+            'time_range': time_range,
+            'value': value
+        }
+        url = '{base}/device/{device_id}/activity'.format(base=REST_SERVER_BASE, device_id=device_id)
+        r = requests.post(url, data=params)
+
+        return r.status_code == requests.codes.ok
