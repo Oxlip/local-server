@@ -10,6 +10,7 @@ import logging
 from database import Database, reset_tables
 from rest_client import RestClient
 from notifications import start_notification_thread
+from monitoringservice import get_client_notification
 import device_handler
 
 def process_command_line():
@@ -51,6 +52,7 @@ def main():
     device_handler.rest_client = rest_client
 
     notification_thread = start_notification_thread(rest_client.channel_id)
+    get_client_notification('AllUsers')
 
     signal.signal(signal.SIGINT, signal_handler)
 
