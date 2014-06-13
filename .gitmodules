@@ -1,0 +1,3 @@
+[submodule "pycoap"]
+	path = pycoap
+	url = git@github.com:samueldotj/pycoap.git
