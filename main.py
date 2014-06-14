@@ -7,11 +7,14 @@ import signal
 import sys
 import argparse
 import logging
+import time
 from database import Database, reset_tables
 from rest_client import RestClient
 from notifications import start_notification_thread
+from tunslip import start_tunslip_thread, get_br_ip_address
 from monitoringservice import get_client_notification
 import device_handler
+
 
 def process_command_line():
     """
@@ -56,7 +59,15 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    #loop until somebody presses q or ctrl+c
+    slip_thread = start_tunslip_thread()
+    while True:
+        time.sleep(1)
+        br_ip_address = get_br_ip_address()
+        print 'got ', br_ip_address
+        if br_ip_address:
+            break
+
+    # loop until somebody presses q or ctrl+c
     chr = sys.stdin.read(1)
     while chr != 'q':
         chr = sys.stdin.read(1)
