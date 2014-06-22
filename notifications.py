@@ -7,6 +7,7 @@ import PubNub
 import threading
 from device_handler import handle_server_command
 
+
 def start_notification_thread(channel_id):
     """
     Start notification processing in a separate thread.

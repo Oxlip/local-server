@@ -63,7 +63,6 @@ def main():
     while True:
         time.sleep(1)
         br_ip_address = get_br_ip_address()
-        print 'got ', br_ip_address
         if br_ip_address:
             break
 

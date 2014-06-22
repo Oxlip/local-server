@@ -7,6 +7,7 @@ from ServerCommands import ServerCommands
 
 rest_client = None
 
+
 def _set_device_status(device_id, value):
     """
     Do the necessary thing to change value of a device.
