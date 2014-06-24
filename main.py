@@ -8,6 +8,8 @@ import sys
 import argparse
 import logging
 import time
+
+from pycoap.coap import coap
 from database import Database, reset_tables
 from rest_client import RestClient
 from notifications import start_notification_thread
@@ -65,6 +67,11 @@ def main():
         br_ip_address = get_br_ip_address()
         if br_ip_address:
             break
+
+    c = coap.Coap(str(br_ip_address))
+    r = c.get('rplinfo/routes?index=0')
+    print 'result ', r.payload, r.response_msg
+    c.destroy()
 
     # loop until somebody presses q or ctrl+c
     chr = sys.stdin.read(1)
