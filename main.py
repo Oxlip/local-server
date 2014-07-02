@@ -8,13 +8,13 @@ import sys
 import argparse
 import logging
 import time
+import gevent
 
 from pycoap.coap import coap
 from database import Database, reset_tables
 from rest_client import RestClient
-from notifications import start_notification_thread
-from tunslip import start_tunslip_thread, get_br_ip_address
-from monitoringservice import get_client_notification
+import notifications
+import tunslip
 import device_handler
 
 
@@ -37,6 +37,17 @@ def get_hub_identity():
     return 'AABBCCDDEEG2', 'AUTH_KEY IS EMPTY'
 
 
+def _get_br_ip_address():
+    """ Helper function to get Border router's IP address.
+    """
+    while True:
+        time.sleep(1)
+        br_ip_address = tunslip.get_br_ip_address()
+        if br_ip_address:
+            break
+    return br_ip_address
+
+
 def signal_handler(signal, frame):
     logging.info('Ctl+C signal receive - Terminating PlugZ-Hub.')
     sys.exit(0)
@@ -45,6 +56,8 @@ def signal_handler(signal, frame):
 def main():
     args = process_command_line()
     logging.basicConfig(level=int(args.verbose))
+
+    signal.signal(signal.SIGINT, signal_handler)
 
     hub_identity, authentication_key = get_hub_identity()
     rest_client = RestClient(hub_identity, authentication_key)
@@ -56,27 +69,12 @@ def main():
     db = Database(rest_client)
     device_handler.rest_client = rest_client
 
-    notification_thread = start_notification_thread(rest_client.channel_id)
-    get_client_notification('AllUsers')
+    _greenlets = [gevent.spawn(notifications.notification_loop, rest_client.channel_id),
+                  gevent.spawn(tunslip.tunslip_loop)]
 
-    signal.signal(signal.SIGINT, signal_handler)
+    br_ip_address = _get_br_ip_address()
 
-    slip_thread = start_tunslip_thread()
-    while True:
-        time.sleep(1)
-        br_ip_address = get_br_ip_address()
-        if br_ip_address:
-            break
-
-    c = coap.Coap(str(br_ip_address))
-    r = c.get('rplinfo/routes?index=0')
-    print 'result ', r.payload, r.response_msg
-    c.destroy()
-
-    # loop until somebody presses q or ctrl+c
-    chr = sys.stdin.read(1)
-    while chr != 'q':
-        chr = sys.stdin.read(1)
+    gevent.joinall(_greenlets)
 
     logging.info('Terminating PlugZ-Hub.')
 

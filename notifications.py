@@ -4,22 +4,10 @@ The notifications may be also a command(turn on light), rule update...
 """
 
 import PubNub
-import threading
 from device_handler import handle_server_command
 
 
-def start_notification_thread(channel_id):
-    """
-    Start notification processing in a separate thread.
-    """
-    notification_thread = threading.Thread(target=_start_notifications, args=(channel_id,))
-    notification_thread.daemon = True
-    notification_thread.start()
-
-    return notification_thread
-
-
-def _start_notifications(channel_id):
+def notification_loop(channel_id):
     """
     Process push notifications in a loop
     """

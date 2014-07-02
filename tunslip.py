@@ -3,7 +3,6 @@
 """
 import os
 from fcntl import ioctl
-import threading
 import socket
 import select
 import serial
@@ -32,6 +31,7 @@ DEFAULT_BAUD_RATE = 115200
 
 ser_dev = None
 _br_ip6_address = None
+
 
 def _create_tun(ipv6_prefix):
     """ Creates tunnel interface and sets up route entries.
@@ -165,7 +165,7 @@ def _tun_to_serial(tun_fd, ser_dev):
         logging.error('Failed to read from TUN')
 
 
-def _tunslip_loop(ipv6_prefix):
+def tunslip_loop(ipv6_prefix=IPV6PREFIX):
     """
     Transmits packets received from serial to ip tunnel and vice versa, forever.
     """
@@ -183,17 +183,6 @@ def _tunslip_loop(ipv6_prefix):
 
             if fd == ser_dev.fileno():
                 _serial_to_tun(ser_dev, tun_fd)
-
-
-def start_tunslip_thread(prefix=IPV6PREFIX):
-    """
-    Start SLIP tunnel processing as a separate thread.
-    """
-    slip_thread = threading.Thread(target=_tunslip_loop, args=(prefix,))
-    slip_thread.daemon = True
-    slip_thread.start()
-
-    return slip_thread
 
 
 def get_br_ip_address():
@@ -219,7 +208,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    _tunslip_loop(IPV6PREFIX)
+    tunslip_loop(IPV6PREFIX)
 
 
 if __name__ == "__main__":
