@@ -2,7 +2,6 @@
 """ SLIP using TUN interface.
 """
 import os
-from fcntl import ioctl
 import socket
 import select
 import serial
@@ -37,6 +36,7 @@ def _create_tun(ipv6_prefix):
     """ Creates tunnel interface and sets up route entries.
     """
     # create virtual interface
+    from fcntl import ioctl
     tun_fd = os.open('/dev/net/tun', os.O_RDWR)
     ifname = 'tun0'
     ifr = struct.pack('16sH', ifname, IFF_TUN | IFF_NO_PI)

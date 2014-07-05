@@ -3,31 +3,42 @@ This module handles communicating with the devices connected over wireless such 
 send status messages received from devices to server.
 """
 import logging
+import simulation
 from ServerCommands import ServerCommands
 
 rest_client = None
+border_router_ip = None
+
+simulation_mode = False
 
 
-def _set_device_status(device_id, value):
+def _set_device_value(device_id, value):
     """
     Do the necessary thing to change value of a device.
      ie 1) Send coap request to the device.
         2) Once the device acks send the result back to the server through REST.
     """
-
-    #XXX - For debugging loop back
-    handle_device_update(device_id, 1, value)
+    if simulation_mode:
+        simulation.set_device_value(device_id, value)
+    else:
+        #TODO - issue CoAP to plugz devices or send REST messages to the devices(wemo. hue etc)
+        pass
 
     return
 
 
-def _get_device_status(device_id, value):
+def _get_device_value(device_id):
     """
     Do the necessary thing to change value of a device.
      ie 1) Send coap request to the device to get the status
         2) Send the status back using REST.
     """
-    return
+    if simulation_mode:
+        status = simulation.get_device_value(device_id)
+    else:
+        #TODO - issue CoAP to plugz devices or send REST messages to the devices(wemo. hue etc)
+        status = ''
+    rest_client.send_device_value(device_id, 1, status)
 
 
 def _execute_action(action_id):
@@ -53,9 +64,9 @@ def handle_server_command(message):
         command = int(message['command'])
         args = message['args']
         if command == ServerCommands.SET_DEVICE_STATUS:
-            _set_device_status(args['device_id'], args['value'])
+            _set_device_value(args['device_id'], args['value'])
         if command == ServerCommands.GET_DEVICE_STATUS:
-            _set_device_status(args['device_id'])
+            _get_device_value(args['device_id'])
         elif command == ServerCommands.EXECUTE_ACTION:
             _execute_action(args['action_id'])
         elif command == ServerCommands.RECONNECT:
@@ -67,15 +78,16 @@ def handle_server_command(message):
     return True
 
 
-def handle_device_update(device_id, status, time_range):
+def handle_device_update(device_id, value, time_range):
     """
     When a device status(motion detected, lamp on etc) is changed it should be send to server.
     The server then send the status to interested parties.
 
     This function will be called by coap stack.
     """
+
     global rest_client
 
-    logging.info('Status update from device :{0} {1}'.format(device_id, status))
-    rest_client.send_device_status(device_id, time_range, status)
+    logging.info('Status update from device :{0} {1}'.format(device_id, value))
+    rest_client.send_device_value(device_id, time_range, value)
 

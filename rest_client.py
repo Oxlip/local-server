@@ -7,8 +7,8 @@ import requests
 from datetime import datetime
 import plugz_exceptions
 
-REST_SERVER_BASE = 'http://162.243.204.9/api/v1'
-#REST_SERVER_BASE = 'http://127.0.0.1:8000/api/v1'
+#REST_SERVER_BASE = 'http://162.243.204.9/api/v1'
+REST_SERVER_BASE = 'http://127.0.0.1:8000/api/v1'
 
 
 class RestClient:
@@ -38,7 +38,7 @@ class RestClient:
 
         return r.json()['devices']
 
-    def send_device_status(self, device_id, time_range, value):
+    def send_device_value(self, device_id, time_range, value):
         """
         Makes REST call to server to update a change in a device's value
         """
@@ -52,3 +52,19 @@ class RestClient:
         r = requests.post(url, data=params)
 
         return r.status_code == requests.codes.ok
+
+    def register_device(self, username, serial_no, device_type, device_name):
+        """
+        Makes REST call to server to register a device with given username.
+        Note - this should be used only for simulation.
+        """
+        params = {
+            'serial_no': serial_no,
+            'device_type': device_type,
+            'device_name': device_name,
+            'hub_identification': self.hub_identification
+        }
+        url = '{base}/user/{username}/register_device'.format(base=REST_SERVER_BASE, username=username)
+        r = requests.post(url, data=params)
+
+        return r.status_code == requests.codes.ok, r.json()

@@ -10,22 +10,12 @@ import logging
 import time
 import gevent
 
-from pycoap.coap import coap
 from database import Database, reset_tables
 from rest_client import RestClient
 import notifications
 import tunslip
 import device_handler
-
-
-def process_command_line():
-    """
-    Process command line arguments and assign to appropriate variable
-    """
-    parser = argparse.ArgumentParser(description='PlugZ Hub.')
-    parser.add_argument('--verbose', default=0, help='Increases the logging amount.')
-    parser.add_argument('--factory-reset', default=0, help='Erases the hub configuration.')
-    return parser.parse_args()
+import simulation
 
 
 def get_hub_identity():
@@ -53,6 +43,17 @@ def signal_handler(signal, frame):
     sys.exit(0)
 
 
+def process_command_line():
+    """
+    Process command line arguments and assign to appropriate variable
+    """
+    parser = argparse.ArgumentParser(description='PlugZ Hub.')
+    parser.add_argument('--verbose', default=0, help='Increases the logging amount.')
+    parser.add_argument('--simulation', action='store_true', help='Simulates WSN and does not connect to real WSN.')
+    parser.add_argument('--factory-reset', default=0, help='Erases the hub configuration.')
+    return parser.parse_args()
+
+
 def main():
     args = process_command_line()
     logging.basicConfig(level=int(args.verbose))
@@ -69,10 +70,15 @@ def main():
     db = Database(rest_client)
     device_handler.rest_client = rest_client
 
-    _greenlets = [gevent.spawn(notifications.notification_loop, rest_client.channel_id),
-                  gevent.spawn(tunslip.tunslip_loop)]
-
-    br_ip_address = _get_br_ip_address()
+    logging.info('Simulation: {0}'.format('on' if args.simulation else 'off'))
+    _greenlets = [gevent.spawn(notifications.notification_loop, rest_client.channel_id)]
+    if args.simulation:
+        device_handler.simulation_mode = True
+        simulation.initialize(rest_client)
+        _greenlets.append(gevent.spawn(simulation.simulation_loop()))
+    else:
+        _greenlets.append(gevent.spawn(tunslip.tunslip_loop))
+        device_handler.border_router_ip = _get_br_ip_address()
 
     gevent.joinall(_greenlets)
 
