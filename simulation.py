@@ -54,17 +54,20 @@ def _random_serial(size=10):
     return 'SIM-' + (''.join(random.choice(chars) for _ in range(size)))
 
 
-def initialize(rest_client, username='samueldotj', count=5):
+def initialize(rest_client, username='samueldotj', create_count=0):
     """
     Initialize plugz mote for simulation
 
     :param rest_client: REST client to use to communicate with the server.
     :param username: Profile id
-    :param count: Number of motes to create
+    :param create_count: Number of motes to create
     :return: None
     """
+
     global _motes
-    for i in range(count):
+
+    #create devices if needed.
+    for i in range(create_count):
         serial = _random_serial()
         device_type = random.choice(['uSwitch', 'uPlug', 'uSense'])
         status, result = rest_client.register_device(username=username, serial_no=serial,
@@ -73,7 +76,13 @@ def initialize(rest_client, username='samueldotj', count=5):
             logging.error('Registering sim mote failed')
             continue
         device_id = result['id']
-        _motes[device_id] = _PlugZMote(device_id=device_id, serial=serial, device_type=device_type)
+
+    # load devcies by querying cloud server
+    devices = rest_client.get_devices()
+    for device in devices:
+        device_id = device['id']
+        device_type = device['type']
+        _motes[device_id] = _PlugZMote(device_id=device_id, serial=None, device_type=device_type)
 
 
 def get_device_list():
