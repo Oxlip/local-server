@@ -11,9 +11,9 @@ import rest_client
 
 
 class _PlugZMote(object):
-    def __init__(self, serial):
-        self.device_id = None
-        self.device_type = random.choice(['uSwitch', 'uPlug', 'uSense'])
+    def __init__(self, device_id, serial, device_type):
+        self.device_id = device_id
+        self.device_type = device_type
         self._nodes = {
             '/dev/mfg': 'PlugZ',
             '/dev/mdl': self.device_type,
@@ -43,7 +43,7 @@ class _PlugZMote(object):
 _motes = {}
 
 
-def _random_serial(size=8):
+def _random_serial(size=10):
     """
     Helper function to generates a serial number.
 
@@ -51,7 +51,7 @@ def _random_serial(size=8):
     :return: A random serial number composed of A-Z and 0-9
     """
     chars = string.ascii_uppercase + string.digits
-    return ''.join(random.choice(chars) for _ in range(size))
+    return 'SIM-' + (''.join(random.choice(chars) for _ in range(size)))
 
 
 def initialize(rest_client, username='samueldotj', count=5):
@@ -66,11 +66,14 @@ def initialize(rest_client, username='samueldotj', count=5):
     global _motes
     for i in range(count):
         serial = _random_serial()
-        mote = _PlugZMote(serial)
+        device_type = random.choice(['uSwitch', 'uPlug', 'uSense'])
         status, result = rest_client.register_device(username=username, serial_no=serial,
-                                                     device_type=mote.device_type, device_name=serial)
-        mote.device_id = result['id']
-        _motes[serial] = mote
+                                                     device_type=device_type, device_name=serial)
+        if not status:
+            logging.error('Registering sim mote failed')
+            continue
+        device_id = result['id']
+        _motes[device_id] = _PlugZMote(device_id=device_id, serial=serial, device_type=device_type)
 
 
 def get_device_list():
@@ -82,17 +85,17 @@ def get_device_list():
     return _motes.keys()
 
 
-def set_device_value(identification, node, value):
+def set_device_value(device_id, node, value):
     global _motes
-    if node in _motes[identification]:
-        _motes[identification][node] = value
-        logging.info('MOTE[{0}]:{1} -> {2}'.format(identification, node, value))
+    if node in _motes[device_id]:
+        _motes[device_id][node] = value
+        logging.info('MOTE[{0}]:{1} -> {2}'.format(device_id, node, value))
     return
 
 
-def get_device_value(identification, node):
+def get_device_value(device_id, node):
     global _motes
-    return _motes[identification][node]
+    return _motes[device_id][node]
 
 
 def simulation_loop():
@@ -104,10 +107,10 @@ def simulation_loop():
         # Randomly select few devices for generating the event
         select_count = random.choice(range(total_motes))
         for i in range(select_count):
-            key = random.choice(_motes.keys())
+            device_id = random.choice(_motes.keys())
             value = random.choice(range(100))
             time_range = random.choice(range(100))
-            device_handler.handle_device_update(_motes[key].device_id, value, time_range)
+            device_handler.handle_device_update(device_id, value, time_range)
 
         # Sleep with random interval
         time.sleep(random.choice(range(total_motes * 3)))
