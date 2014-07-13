@@ -34,11 +34,16 @@ def _get_device_value(device_id):
         2) Send the status back using REST.
     """
     if simulation_mode:
-        status = simulation.get_device_value(device_id)
+        value = simulation.get_device_value(device_id)
+        time_range = None
+        source = 'C'
     else:
         #TODO - issue CoAP to plugz devices or send REST messages to the devices(wemo. hue etc)
         status = ''
-    rest_client.send_device_value(device_id, 1, status)
+        time_range = None
+        source = 'C'
+
+    rest_client.send_device_value(device_id=device_id, time_range=None, source=time_range, value=value)
 
 
 def _execute_action(action_id):
@@ -78,7 +83,7 @@ def handle_server_command(message):
     return True
 
 
-def handle_device_update(device_id, value, time_range):
+def handle_device_update(device_id, source, value, time_range):
     """
     When a device status(motion detected, lamp on etc) is changed it should be send to server.
     The server then send the status to interested parties.
@@ -88,6 +93,6 @@ def handle_device_update(device_id, value, time_range):
 
     global rest_client
 
-    logging.info('Status update from device :{0} {1}'.format(device_id, value))
-    rest_client.send_device_value(device_id, time_range, value)
+    logging.info('Sending device value to cloud:{0} source {1} value {1}'.format(device_id, source, value))
+    rest_client.send_device_value(device_id, time_range, source, value)
 

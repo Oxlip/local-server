@@ -24,7 +24,7 @@ def get_hub_identity():
     """
     # TODO - implement reading from beaglebone IDPROM
     # For now this is a test data (same as backend/models/ExampleData.SQL)
-    return 'AABBCCDDEEG2', 'AUTH_KEY IS EMPTY'
+    return 'I8FJPAN11X', 'AUTH_KEY IS EMPTY'
 
 
 def _get_br_ip_address():

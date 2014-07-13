@@ -38,7 +38,7 @@ class RestClient:
 
         return r.json()['devices']
 
-    def send_device_value(self, device_id, time_range, value):
+    def send_device_value(self, device_id, time_range, source, value):
         """
         Makes REST call to server to update a change in a device's value
         """
@@ -46,6 +46,7 @@ class RestClient:
             'device_id': device_id,
             'timestamp': datetime.now(),
             'time_range': time_range,
+            'source': source,
             'value': value
         }
         url = '{base}/device/{device_id}/activity'.format(base=REST_SERVER_BASE, device_id=device_id)
