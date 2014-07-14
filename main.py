@@ -3,12 +3,15 @@
 """
 The main program which binds everything else.
 """
+import gevent.monkey
+gevent.monkey.patch_all()
 import signal
 import sys
 import argparse
 import logging
 import time
-import gevent
+
+from pycoap.coap.coap import Coap
 
 from database import Database, reset_tables
 from rest_client import RestClient
@@ -17,6 +20,8 @@ import tunslip
 import device_handler
 import simulation
 
+_border_router_ip = None
+
 
 def get_hub_identity():
     """
@@ -24,22 +29,63 @@ def get_hub_identity():
     """
     # TODO - implement reading from beaglebone IDPROM
     # For now this is a test data (same as backend/models/ExampleData.SQL)
-    return 'I8FJPAN11X', 'AUTH_KEY IS EMPTY'
+    return 'T3TBGRZ5PW', 'AUTH_KEY IS EMPTY'
 
 
-def _get_br_ip_address():
+def get_br_ip_address():
     """ Helper function to get Border router's IP address.
     """
+    global _border_router_ip
+    if _border_router_ip:
+        return _border_router_ip
     while True:
         time.sleep(1)
-        br_ip_address = tunslip.get_br_ip_address()
-        if br_ip_address:
-            break
-    return br_ip_address
+        _border_router_ip = tunslip.get_br_ip_address()
+        if _border_router_ip:
+            return _border_router_ip
+
+
+def _local_scan_loop(br_ip_address):
+    """ Scans local network every one second for new devices.
+    """
+    c = Coap(str(br_ip_address))
+    while True:
+        r = c.get('rplinfo/routes')
+        print r.payload
+        time.sleep(1)
+    c.destroy()
+    return
+
+
+def _notification_loop(channel_id):
+    """
+    Process push notifications in a loop
+    """
+    import PubNub
+    from device_handler import handle_server_command
+
+    # TODO - Replace the publish key and subscribe key
+    pubnub = PubNub.Pubnub(publish_key='pub-c-9ff29ff2-1427-4864-bbfa-7d3270a233dc',
+                           subscribe_key='sub-c-7e20413a-8d2d-11e3-ae86-02ee2ddab7fe',
+                           ssl_on=False)
+    pubnub.subscribe({
+        'channel': channel_id,
+        'callback': handle_server_command
+    })
 
 
 def signal_handler(signal, frame):
     logging.info('Ctl+C signal receive - Terminating PlugZ-Hub.')
+    import gc
+    import traceback
+    from greenlet import greenlet
+
+    for ob in gc.get_objects():
+        if not isinstance(ob, greenlet):
+            continue
+        if not ob:
+            continue
+        logging.debug(''.join(traceback.format_stack(ob.gr_frame)))
     sys.exit(0)
 
 
@@ -71,14 +117,18 @@ def main():
     device_handler.rest_client = rest_client
 
     logging.info('Simulation: {0}'.format('on' if args.simulation else 'off'))
-    _greenlets = [gevent.spawn(notifications.notification_loop, rest_client.channel_id)]
+    _greenlets = [gevent.spawn(_notification_loop, rest_client.channel_id)]
+    _greenlets = []
     if args.simulation:
         device_handler.simulation_mode = True
         simulation.initialize(rest_client)
-        _greenlets.append(gevent.spawn(simulation.simulation_loop()))
+        _greenlets.append(gevent.spawn(simulation.simulation_loop))
     else:
         _greenlets.append(gevent.spawn(tunslip.tunslip_loop))
-        device_handler.border_router_ip = _get_br_ip_address()
+        device_handler.border_router_ip = get_br_ip_address()
+        logging.debug('Border router IP {0}'.format(get_br_ip_address()))
+
+    _greenlets.append(gevent.spawn(_local_scan_loop, get_br_ip_address()))
 
     gevent.joinall(_greenlets)
 
