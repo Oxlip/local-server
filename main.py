@@ -10,18 +10,18 @@ import sys
 import argparse
 import logging
 import time
+import json
 
 from pycoap.coap.coap import Coap
 
 from database import Database, reset_tables
 from rest_client import RestClient
-import notifications
 import tunslip
 import device_handler
 import simulation
 
 _border_router_ip = None
-
+_discovered_motes = {}
 
 def get_hub_identity():
     """
@@ -45,14 +45,43 @@ def get_br_ip_address():
             return _border_router_ip
 
 
+def _get_mote_info(mote_ip):
+    """ Returns mote information by using IPSO COAP nodes.
+    """
+    c = Coap(mote_ip)
+    payload = str(c.get('dev/ser').payload)
+    c.destroy()
+
+    return payload
+
+
 def _local_scan_loop(br_ip_address):
     """ Scans local network every one second for new devices.
     """
+    global _discovered_motes
     c = Coap(str(br_ip_address))
     while True:
-        r = c.get('rplinfo/routes')
-        print r.payload
-        time.sleep(1)
+        try:
+            count = int(c.get('rplinfo/routes').payload)
+            print '{0} motes connected to the uHub'.format(count)
+            for i in range(count):
+                payload = str(c.get('rplinfo/routes?index={0}'.format(i)).payload)
+                print 'rplinfo/routes?index={0}'.format(i), payload
+                result = json.loads(payload)
+                mote_ip = result['dest']
+                if mote_ip in _discovered_motes:
+                    print mote_ip, 'already exists ', _get_mote_info(mote_ip)
+                else:
+                    _discovered_motes[mote_ip] = _get_mote_info(mote_ip)
+                    print 'new discovery ', mote_ip
+
+        except Exception, e:
+            raise
+        else:
+            pass
+        finally:
+            pass
+        time.sleep(10)
     c.destroy()
     return
 
@@ -94,7 +123,8 @@ def process_command_line():
     Process command line arguments and assign to appropriate variable
     """
     parser = argparse.ArgumentParser(description='PlugZ Hub.')
-    parser.add_argument('--verbose', default=0, help='Increases the logging amount.')
+    parser.add_argument('--verbose', default=100, help='Sets the logging amount.')
+    parser.add_argument('--coap-log', default=100, help='Sets coap logging amount.')
     parser.add_argument('--simulation', action='store_true', help='Simulates WSN and does not connect to real WSN.')
     parser.add_argument('--factory-reset', default=0, help='Erases the hub configuration.')
     return parser.parse_args()
@@ -103,6 +133,8 @@ def process_command_line():
 def main():
     args = process_command_line()
     logging.basicConfig(level=int(args.verbose))
+    coap_logger = logging.getLogger('coap')
+    coap_logger.setLevel(int(args.coap_log))
 
     signal.signal(signal.SIGINT, signal_handler)
 
