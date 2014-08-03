@@ -6,7 +6,7 @@ import logging
 import string
 import random
 import time
-import device_handler
+import devices
 from datetime import datetime
 
 class _PlugZMote(object):
@@ -50,20 +50,20 @@ class _PlugZMote(object):
         """ Simulates the given mote.
         """
         if self.device_type in ['uSwitch', 'uPlug']:
-            device_handler.handle_device_update(self.device_id, source='B', value=self._button_state, time_range=1)
+            devices.handle_device_update(self.device_id, source='B', value=self._button_state, time_range=1)
             total_load = self._max_load / 100 * self._button_state
-            device_handler.handle_device_update(self.device_id, source='C', value=total_load, time_range=1)
+            devices.handle_device_update(self.device_id, source='C', value=total_load, time_range=1)
         elif self.device_type == 'uSense':
             self._temp_sensor += random.choice(xrange(-2, 2))
-            device_handler.handle_device_update(self.device_id, source='T', value=self._temp_sensor, time_range=1)
+            devices.handle_device_update(self.device_id, source='T', value=self._temp_sensor, time_range=1)
             self._humidity_sensor += random.choice(xrange(-2, 2))
-            device_handler.handle_device_update(self.device_id, source='H', value=self._humidity_sensor, time_range=1)
+            devices.handle_device_update(self.device_id, source='H', value=self._humidity_sensor, time_range=1)
             self._humidity_sensor = random.choice(xrange(0, 100))
-            device_handler.handle_device_update(self.device_id, source='L', value=self._light_sensor, time_range=1)
+            devices.handle_device_update(self.device_id, source='L', value=self._light_sensor, time_range=1)
             self._motion_sensor = random.choice([0, 1])
-            device_handler.handle_device_update(self.device_id, source='M', value=self._motion_sensor, time_range=1)
+            devices.handle_device_update(self.device_id, source='M', value=self._motion_sensor, time_range=1)
             self._gas_sensor = random.choice(xrange(0, 100))
-            device_handler.handle_device_update(self.device_id, source='G', value=self._gas_sensor, time_range=1)
+            devices.handle_device_update(self.device_id, source='G', value=self._gas_sensor, time_range=1)
 
 # simulated motes - key is the serial
 _motes = {}

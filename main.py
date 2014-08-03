@@ -17,11 +17,12 @@ from pycoap.coap.coap import Coap
 from database import Database, reset_tables
 from rest_client import RestClient
 import tunslip
-import device_handler
+import devices
 import simulation
 
 _border_router_ip = None
 _discovered_motes = {}
+
 
 def get_hub_identity():
     """
@@ -91,7 +92,7 @@ def _notification_loop(channel_id):
     Process push notifications in a loop
     """
     import PubNub
-    from device_handler import handle_server_command
+    from devices import handle_server_command
 
     # TODO - Replace the publish key and subscribe key
     pubnub = PubNub.Pubnub(publish_key='pub-c-9ff29ff2-1427-4864-bbfa-7d3270a233dc',
@@ -146,18 +147,18 @@ def main():
         reset_tables(hub_identity, rest_client.hub_id)
 
     db = Database(rest_client)
-    device_handler.rest_client = rest_client
+    devices.rest_client = rest_client
 
     logging.info('Simulation: {0}'.format('on' if args.simulation else 'off'))
     _greenlets = [gevent.spawn(_notification_loop, rest_client.channel_id)]
     _greenlets = []
     if args.simulation:
-        device_handler.simulation_mode = True
+        devices.simulation_mode = True
         simulation.initialize(rest_client)
         _greenlets.append(gevent.spawn(simulation.simulation_loop))
     else:
         _greenlets.append(gevent.spawn(tunslip.tunslip_loop))
-        device_handler.border_router_ip = get_br_ip_address()
+        devices.border_router_ip = get_br_ip_address()
         logging.debug('Border router IP {0}'.format(get_br_ip_address()))
 
     _greenlets.append(gevent.spawn(_local_scan_loop, get_br_ip_address()))

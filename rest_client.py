@@ -7,8 +7,8 @@ import requests
 from datetime import datetime
 import plugz_exceptions
 
-#REST_SERVER_BASE = 'http://162.243.204.9/api/v1'
-REST_SERVER_BASE = 'http://127.0.0.1:8000/api/v1'
+REST_SERVER_BASE = 'http://162.243.204.9/api/v1'
+#REST_SERVER_BASE = 'http://127.0.0.1:8000/api/v1'
 
 
 class RestClient:
