@@ -28,6 +28,43 @@ def reset_tables(identification, hub_id):
     session.commit()
 
 
+def _is_device_in_list(device_list, device_id):
+    """
+    Finds whether the given device_id exists in the given list.
+    """
+    for dev in device_list:
+        if (isinstance(dev, Device) and dev.id == device_id) or \
+           (isinstance(dev, dict) and dev['id'] == device_id):
+            return True
+    return False
+
+
+def _device_list_diff(local_devices, cloud_devices):
+    """
+    Do diff of a local_devices and cloud_devices.
+    Returns number of devices added and number of devices deleted.
+
+    TODO - The algorithm used is worst, as simple sorting and then finding
+           would make a huge difference...
+    """
+    devices_added = []
+    devices_removed = local_devices
+    for c_dev in cloud_devices:
+        device_id = c_dev['id']
+        already_exists = _is_device_in_list(local_devices, device_id)
+        if not already_exists:
+            devices_added.append(c_dev)
+
+    for i in xrange(len(devices_removed) - 1, -1, -1):
+        l_dev = devices_removed[i]
+        device_id = l_dev.id
+        still_exists = _is_device_in_list(cloud_devices, device_id)
+        if not still_exists:
+            devices_removed.append(l_dev)
+
+    return devices_added, devices_removed
+
+
 class Database:
     """
     PlugZ Hub Database class - Contains all the functions to persist device, rule and sensor data information.
@@ -68,13 +105,38 @@ class Database:
         if not sync_required:
             return
 
-        # TODO - sync the database by using REST calls to the server
-        r_devices = self.rest_client.get_devices()
+        try:
+            clould_dlist = self.rest_client.get_devices()
+        except Exception, e:
+            devices_added, devices_removed = [], []
+            logging.error('Failed to sync to cloud server - {0}'.format(e))
+        else:
+            local_dlist = self.session.query(Device).all()
+            devices_added, devices_removed = _device_list_diff(local_dlist, clould_dlist)
 
-        logging.info('Device information synched with server:')
-        for r_device in r_devices:
-            logging.info(r_device)
+        try:
+            for a_dev in devices_added:
+                logging.info('++ {0}'.format(a_dev))
 
-        # fill the object list from database
+                dev = Device(id=a_dev['id'], identification=a_dev['identification'],
+                             sub_identification=a_dev['sub_identification'],
+                             type=a_dev['type'], default_value=a_dev['default_value'])
+                self.session.add(dev)
+
+            for r_dev in devices_removed:
+                logging.info('-- {0}'.format(r_dev))
+                self.session.delete(r_dev)
+
+            self.session.commit()
+        except Exception, e:
+            logging.error('Failed to update the local DB - {0}'.format(e))
+            self.session.rollback()
+        else:
+            logging.info('Device information synched with server:')
+
+
+        # reload the device list from local database
         self.devices = self.session.query(Device).all()
+
+        #TODO - sync rules also.
         self.rules = self.session.query(Rule).all()
