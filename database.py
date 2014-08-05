@@ -59,8 +59,8 @@ def _device_list_diff(local_devices, cloud_devices):
         l_dev = devices_removed[i]
         device_id = l_dev.id
         still_exists = _is_device_in_list(cloud_devices, device_id)
-        if not still_exists:
-            devices_removed.append(l_dev)
+        if still_exists:
+            del devices_removed[i]
 
     return devices_added, devices_removed
 
@@ -114,9 +114,10 @@ class Database:
             local_dlist = self.session.query(Device).all()
             devices_added, devices_removed = _device_list_diff(local_dlist, clould_dlist)
 
+        logging.info('{0} devices added and {1} devices removed'.format(len(devices_added), len(devices_removed)))
         try:
             for a_dev in devices_added:
-                logging.info('++ {0}'.format(a_dev))
+                logging.info('++ {0} {1}'.format(a_dev['id'], a_dev['identification']))
 
                 dev = Device(id=a_dev['id'], identification=a_dev['identification'],
                              sub_identification=a_dev['sub_identification'],
@@ -124,7 +125,7 @@ class Database:
                 self.session.add(dev)
 
             for r_dev in devices_removed:
-                logging.info('-- {0}'.format(r_dev))
+                logging.info('-- {0} {1}'.format(r_dev.id, r_dev.identification))
                 self.session.delete(r_dev)
 
             self.session.commit()
