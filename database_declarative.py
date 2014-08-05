@@ -34,7 +34,7 @@ class Device(Base):
     id = Column(Integer, primary_key=True)
     identification = Column(String(50))
     sub_identification = Column(Integer)
-    profile_id = Column(Integer)
+    type = Column(String(30))
     default_value = Column(String)
 
 
