@@ -26,6 +26,27 @@ class DeviceTypes:
     USWITCH = 'uSwitch'
 
 
+class DeviceValueSource:
+    """
+    # B - Button(value in percentage 0-100)
+    # CA - Current Sensor(value in mA)
+    # CS - Current Sensor Summary(peak, active etc in json format)
+    # T - Temperature sensor(value in F)
+    # M - Motion sensor(value = 0 - no motion)
+    # H - Humidity sensor(value in percentage 0-100)
+    # L - Light sensor(value in lux)
+    # G - Gas sensor (value in percentage)
+    """
+    BUTTON = 'B'
+    CURRENT_AMPS = 'CA'
+    CURRENT_SUMMARY = 'CS'
+    TEMPERATURE = 'T'
+    MOTION = 'M'
+    HUMIDITY = 'H'
+    LIGHT = 'L'
+    GAS = 'G'
+
+
 def _set_dev_pwr_dim(ip, device_id, dimmer, percentage):
     """
     Set dimmer percentage
@@ -39,7 +60,8 @@ def _set_dev_pwr_dim(ip, device_id, dimmer, percentage):
             logging.error(err_msg)
             return result.status
         c.destroy()
-        rest_client.send_device_value(device_id=device_id, time_range=None, source='B', value=percentage)
+        rest_client.send_device_value(device_id=device_id, time_range=1,
+                                      source=DeviceValueSource.BUTTON, value=percentage)
     except Exception, e:
         logging.error(e)
         return None
