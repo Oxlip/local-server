@@ -30,7 +30,7 @@ def get_hub_identity():
     """
     # TODO - implement reading from beaglebone IDPROM
     # For now this is a test data (same as backend/models/ExampleData.SQL)
-    return 'T3TBGRZ5PW', 'AUTH_KEY IS EMPTY'
+    return 'I8FJPAN11X', 'AUTH_KEY IS EMPTY'
 
 
 def get_br_ip_address():
@@ -46,8 +46,8 @@ def get_br_ip_address():
             return _border_router_ip
 
 
-def _get_mote_info(mote_ip):
-    """ Returns mote information by using IPSO COAP nodes.
+def _get_mote_ser(mote_ip):
+    """ Returns mote serial number by using IPSO COAP nodes.
     """
     c = Coap(mote_ip)
     payload = str(c.get('dev/ser').payload)
@@ -56,7 +56,7 @@ def _get_mote_info(mote_ip):
     return payload
 
 
-def _local_scan_loop(br_ip_address):
+def _local_scan_loop(db, br_ip_address):
     """ Scans local network every one second for new devices.
     """
     global _discovered_motes
@@ -64,17 +64,14 @@ def _local_scan_loop(br_ip_address):
     while True:
         try:
             count = int(c.get('rplinfo/routes').payload)
-            print '{0} motes connected to the uHub'.format(count)
             for i in range(count):
                 payload = str(c.get('rplinfo/routes?index={0}'.format(i)).payload)
-                print 'rplinfo/routes?index={0}'.format(i), payload
                 result = json.loads(payload)
                 mote_ip = result['dest']
-                if mote_ip in _discovered_motes:
-                    print mote_ip, 'already exists ', _get_mote_info(mote_ip)
-                else:
-                    _discovered_motes[mote_ip] = _get_mote_info(mote_ip)
-                    print 'new discovery ', mote_ip
+                if mote_ip not in _discovered_motes:
+                    _discovered_motes[mote_ip] = _get_mote_ser(mote_ip)
+                    print 'new mote found ', mote_ip, _discovered_motes[mote_ip]
+                    db.set_device_ip(_discovered_motes[mote_ip], mote_ip)
 
         except Exception, e:
             raise
@@ -148,6 +145,7 @@ def main():
 
     db = Database(rest_client)
     devices.rest_client = rest_client
+    devices.db = db
 
     logging.info('Simulation: {0}'.format('on' if args.simulation else 'off'))
     _greenlets = [gevent.spawn(_notification_loop, rest_client.channel_id)]
@@ -161,7 +159,7 @@ def main():
         devices.border_router_ip = get_br_ip_address()
         logging.debug('Border router IP {0}'.format(get_br_ip_address()))
 
-    _greenlets.append(gevent.spawn(_local_scan_loop, get_br_ip_address()))
+    _greenlets.append(gevent.spawn(_local_scan_loop, db, get_br_ip_address()))
 
     gevent.joinall(_greenlets)
 
