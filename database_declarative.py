@@ -36,6 +36,7 @@ class Device(Base):
     sub_identification = Column(Integer)
     type = Column(String(30))
     default_value = Column(String)
+    ip = Column(String) # IP address of the node.
 
 
 class DeviceData(Base):

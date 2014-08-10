@@ -72,8 +72,6 @@ class Database:
 
     def __init__(self, rest_client, sync_interval=60):
         self.engine = create_engine(DATABASE_FILE_NAME, echo=False)
-        self.devices = []
-        self.rules = []
         self.last_sync_time = datetime.now()
         self.sync_interval = sync_interval
         self.session = create_db_session(self.engine)
@@ -81,13 +79,23 @@ class Database:
         init_tables(self.engine)
         self._sync(force=True)
 
-    def get_devices(self):
+    def get_device(self, device_id):
         """
-        Returns all the devices that can be managed by a hub.
-        This function will take care of syncing with server if needed.
+        Returns a device with given device_id
         """
-        self._sync()
-        return self.devices
+        return self.session.query(Device).filter_by(id=device_id).one()
+
+    def is_device_exists(self, identification):
+        """
+        Returns True if a device with given identification exists
+        """
+        return self.session.query(Device).filter_by(identification=identification).count() > 0
+
+    def set_device_ip(self, identification, ip):
+        """
+        Sets IP address of a device.
+        """
+        self.session.query(Device).filter_by(identification=identification).update({"ip": ip})
 
     def get_rules(self):
         """
@@ -135,9 +143,4 @@ class Database:
         else:
             logging.info('Device information synched with server:')
 
-
-        # reload the device list from local database
-        self.devices = self.session.query(Device).all()
-
         #TODO - sync rules also.
-        self.rules = self.session.query(Rule).all()
