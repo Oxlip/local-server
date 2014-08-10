@@ -1,4 +1,4 @@
-plugz-hub
+uHub
 =========
 
-Software running on plugz-hub.
+Software running on uHub.

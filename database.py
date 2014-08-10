@@ -67,7 +67,7 @@ def _device_list_diff(local_devices, cloud_devices):
 
 class Database:
     """
-    PlugZ Hub Database class - Contains all the functions to persist device, rule and sensor data information.
+    uHub Database class - Contains all the functions to persist device, rule and sensor data information.
     """
 
     def __init__(self, rest_client, sync_interval=60):

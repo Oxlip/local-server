@@ -1,5 +1,5 @@
 """
-Simulates few plugz mote coap nodes.
+Simulates few motes.
 """
 
 import logging
@@ -9,7 +9,8 @@ import time
 import devices
 from datetime import datetime
 
-class _PlugZMote(object):
+
+class _Mote(object):
     def __init__(self, device_id, serial, device_type):
         self.device_id = device_id
         self.device_type = device_type
@@ -71,7 +72,7 @@ _motes = {}
 
 def initialize(rest_client):
     """
-    Initialize plugz mote for simulation
+    Initialize mote for simulation
 
     :param rest_client: REST client to use to communicate with the server.
     :param username: Profile id
@@ -86,12 +87,13 @@ def initialize(rest_client):
     for device in devices:
         device_id = device['id']
         device_type = device['type']
-        _motes[device_id] = _PlugZMote(device_id=device_id, serial=None, device_type=device_type)
+        _motes[device_id] = _Mote(device_id=device_id, serial=None, device_type=device_type)
 
 
 def set_device_value(device_id, value):
     global _motes
     _motes[device_id].set_value(value)
+
 
 def get_device_value(device_id, source):
     global _motes

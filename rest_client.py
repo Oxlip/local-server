@@ -5,10 +5,11 @@ REST client to access the remote server. Provides APIs to access remote server.
 
 import requests
 from datetime import datetime
-import plugz_exceptions
+import uhub_exceptions
+import logging
 
-REST_SERVER_BASE = 'http://162.243.204.9/api/v1'
-#REST_SERVER_BASE = 'http://127.0.0.1:8000/api/v1'
+#REST_SERVER_BASE = 'http://162.243.204.9/api/v1'
+REST_SERVER_BASE = 'http://192.168.1.74:8000/api/v1'
 
 
 class RestClient:
@@ -20,7 +21,7 @@ class RestClient:
         r = requests.post(url, headers={'http_auth_key': authentication_key})
         if r.status_code != requests.codes.ok:
             # TODO - retry before giving up
-            raise plugz_exceptions.ConnectFailedError('REST connection failed {0}'.format(r.status_code))
+            raise uhub_exceptions.ConnectFailedError('Connecting uHub to cloud failed. Status code - {0}'.format(r.status_code))
 
         hub = r.json()
         self.hub_id = hub['id']
@@ -34,7 +35,8 @@ class RestClient:
         url = '{base}/hub/{identification}/devices'.format(base=REST_SERVER_BASE, identification=self.hub_identification)
         r = requests.get(url)
         if r.status_code != requests.codes.ok:
-            return None
+            logging.error('Failed to fetch device list from cloud server {0}'.format(r.status_code))
+            return []
 
         return r.json()['devices']
 

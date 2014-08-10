@@ -102,7 +102,7 @@ def _notification_loop(channel_id):
 
 
 def signal_handler(signal, frame):
-    logging.info('Ctl+C signal receive - Terminating PlugZ-Hub.')
+    logging.info('Ctl+C signal receive - Terminating uHub.')
     import gc
     import traceback
     from greenlet import greenlet
@@ -120,7 +120,7 @@ def process_command_line():
     """
     Process command line arguments and assign to appropriate variable
     """
-    parser = argparse.ArgumentParser(description='PlugZ Hub.')
+    parser = argparse.ArgumentParser(description='uHub.')
     parser.add_argument('--verbose', default=100, help='Sets the logging amount.')
     parser.add_argument('--coap-log', default=100, help='Sets coap logging amount.')
     parser.add_argument('--simulation', action='store_true', help='Simulates WSN and does not connect to real WSN.')
@@ -163,6 +163,6 @@ def main():
 
     gevent.joinall(_greenlets)
 
-    logging.info('Terminating PlugZ-Hub.')
+    logging.info('Terminating uHub.')
 
 main()

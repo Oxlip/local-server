@@ -82,7 +82,7 @@ def _get_device_value(device_id):
         time_range = None
         source = 'C'
     else:
-        #TODO - issue CoAP to plugz devices or send REST messages to the devices(wemo. hue etc)
+        #TODO - issue CoAP to motes or send REST messages to the devices(wemo. hue etc)
         status = ''
         time_range = None
         source = 'C'
