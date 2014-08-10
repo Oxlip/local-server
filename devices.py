@@ -4,12 +4,47 @@ send status messages received from devices to server.
 """
 import logging
 import simulation
+import json
 from ServerCommands import ServerCommands
+from pycoap.coap.coap import Coap
+from pycoap.coap.message import MessageStatus
 
 rest_client = None
+db = None
 border_router_ip = None
 
 simulation_mode = False
+
+
+class DeviceTypes:
+    """
+    Type of devices
+    """
+    UHUB = 'uHub'
+    UPLUG = 'uPlug'
+    USENSE = 'uSense'
+    USWITCH = 'uSwitch'
+
+
+def _set_dev_pwr_dim(ip, device_id, dimmer, percentage):
+    """
+    Set dimmer percentage
+    """
+    try:
+        c = Coap(ip)
+        node = 'dev/pwr/{dimmer}/dim'.format(dimmer=dimmer)
+        result = c.put(node, payload=str(percentage))
+        if result.status != MessageStatus.success:
+            err_msg = 'PUT {0} failed {1} {2}'.format(node, result.status, result.payload)
+            logging.error(err_msg)
+            return result.status
+        c.destroy()
+        rest_client.send_device_value(device_id=device_id, time_range=None, source='B', value=percentage)
+    except Exception, e:
+        logging.error(e)
+        return None
+
+    return result.status
 
 
 def _set_device_value(device_id, value):
@@ -21,9 +56,18 @@ def _set_device_value(device_id, value):
     if simulation_mode:
         simulation.set_device_value(device_id, value)
     else:
-        #TODO - issue CoAP to plugz devices or send REST messages to the devices(wemo. hue etc)
-        pass
-
+        dev = db.get_device(device_id)
+        """
+        For now we can issue command only to uHub and uSwitch.
+        """
+        if dev.type == DeviceTypes.UPLUG or dev.type == DeviceTypes.USWITCH:
+            if dev.sub_identification:
+                sub_dev = dev.sub_identification
+            else:
+                sub_dev = 0
+            _set_dev_pwr_dim(dev.ip, device_id, sub_dev, value)
+        else:
+            logging.error('Cant set device type - {0}'.format(dev.type))
     return
 
 
@@ -43,7 +87,7 @@ def _get_device_value(device_id):
         time_range = None
         source = 'C'
 
-    rest_client.send_device_value(device_id=device_id, time_range=None, source=time_range, value=value)
+    rest_client.send_device_value(device_id=device_id, time_range=None, source=source, value=value)
 
 
 def _execute_action(action_id):
