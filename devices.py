@@ -3,7 +3,6 @@ This module handles communicating with the devices connected over wireless such 
 send status messages received from devices to server.
 """
 import logging
-import simulation
 import json
 from ServerCommands import ServerCommands
 from pycoap.coap.coap import Coap
@@ -76,6 +75,7 @@ def _set_device_value(device_id, value):
         2) Once the device acks send the result back to the server through REST.
     """
     if simulation_mode:
+        import simulation
         simulation.set_device_value(device_id, value)
     else:
         dev = db.get_device(device_id)
@@ -100,6 +100,7 @@ def _get_device_value(device_id):
         2) Send the status back using REST.
     """
     if simulation_mode:
+        import simulation
         value = simulation.get_device_value(device_id)
         time_range = None
         source = 'C'
