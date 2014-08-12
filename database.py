@@ -85,6 +85,12 @@ class Database:
         """
         return self.session.query(Device).filter_by(id=device_id).one()
 
+    def get_device_by_identification(self, identification):
+        """
+        Returns a device with the given identification
+        """
+        return self.session.query(Device).filter_by(identification=identification).one()
+
     def is_device_exists(self, identification):
         """
         Returns True if a device with given identification exists
