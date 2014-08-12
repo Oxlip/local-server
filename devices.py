@@ -4,13 +4,13 @@ send status messages received from devices to server.
 """
 import logging
 import json
+import time
 from ServerCommands import ServerCommands
 from pycoap.coap.coap import Coap
 from pycoap.coap.message import MessageStatus
 
 rest_client = None
 db = None
-border_router_ip = None
 
 simulation_mode = False
 
@@ -163,3 +163,47 @@ def handle_device_update(device_id, source, value, time_range):
     logging.info('Sending device value to cloud:{0} source {1} value {1}'.format(device_id, source, value))
     rest_client.send_device_value(device_id, time_range, source, value)
 
+
+def _get_mote_ser(mote_ip):
+    """ Returns mote serial number by using IPSO COAP nodes.
+    """
+    c = Coap(mote_ip)
+    payload = str(c.get('dev/ser').payload)
+    c.destroy()
+
+    return payload
+
+
+def scan_loop(db, br_ip_address):
+    """ Scans local network every 10 second for new devices.
+    """
+    _discovered_motes = {}
+    c = Coap(str(br_ip_address))
+    while True:
+        try:
+            count = int(c.get('rplinfo/routes').payload)
+            for i in range(count):
+                payload = str(c.get('rplinfo/routes?index={0}'.format(i)).payload)
+                result = json.loads(payload)
+                mote_ip = result['dest']
+                if mote_ip in _discovered_motes:
+                    continue
+
+                # New device found - query it to get the identification no.
+                identification = _get_mote_ser(mote_ip)
+                node_coap = Coap(mote_ip)
+                identification = str(node_coap.get('dev/ser').payload)
+                # Dont destroy the coap object - preserve it for future access.
+                _discovered_motes[mote_ip] = node_coap
+                print 'New device found ', mote_ip, identification
+                db.set_device_ip(identification, mote_ip)
+
+        except Exception, e:
+            raise
+        else:
+            pass
+        finally:
+            pass
+        time.sleep(10)
+    c.destroy()
+    return

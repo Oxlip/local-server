@@ -21,7 +21,6 @@ import devices
 import simulation
 
 _border_router_ip = None
-_discovered_motes = {}
 
 
 def get_hub_identity():
@@ -44,44 +43,6 @@ def get_br_ip_address():
         _border_router_ip = tunslip.get_br_ip_address()
         if _border_router_ip:
             return _border_router_ip
-
-
-def _get_mote_ser(mote_ip):
-    """ Returns mote serial number by using IPSO COAP nodes.
-    """
-    c = Coap(mote_ip)
-    payload = str(c.get('dev/ser').payload)
-    c.destroy()
-
-    return payload
-
-
-def _local_scan_loop(db, br_ip_address):
-    """ Scans local network every one second for new devices.
-    """
-    global _discovered_motes
-    c = Coap(str(br_ip_address))
-    while True:
-        try:
-            count = int(c.get('rplinfo/routes').payload)
-            for i in range(count):
-                payload = str(c.get('rplinfo/routes?index={0}'.format(i)).payload)
-                result = json.loads(payload)
-                mote_ip = result['dest']
-                if mote_ip not in _discovered_motes:
-                    _discovered_motes[mote_ip] = _get_mote_ser(mote_ip)
-                    print 'new mote found ', mote_ip, _discovered_motes[mote_ip]
-                    db.set_device_ip(_discovered_motes[mote_ip], mote_ip)
-
-        except Exception, e:
-            raise
-        else:
-            pass
-        finally:
-            pass
-        time.sleep(10)
-    c.destroy()
-    return
 
 
 def _notification_loop(channel_id):
@@ -156,10 +117,9 @@ def main():
         _greenlets.append(gevent.spawn(simulation.simulation_loop))
     else:
         _greenlets.append(gevent.spawn(tunslip.tunslip_loop))
-        devices.border_router_ip = get_br_ip_address()
         logging.debug('Border router IP {0}'.format(get_br_ip_address()))
 
-    _greenlets.append(gevent.spawn(_local_scan_loop, db, get_br_ip_address()))
+    _greenlets.append(gevent.spawn(devices.scan_loop, db, get_br_ip_address()))
 
     gevent.joinall(_greenlets)
 
