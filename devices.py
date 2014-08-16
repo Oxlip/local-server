@@ -174,6 +174,34 @@ def _get_mote_ser(mote_ip):
     return payload
 
 
+def _obs_dev_pwr_n_kw(payload, msg, dev):
+    """ Callback for handling OBS current information dumped by uPlug and uSwitch
+    """
+    #TODO - rest_client.send_device_value()
+    logging.debug('Received current information from {0} payload = {1}'.format(dev.id, payload))
+
+
+def _add_mote(mote_ip):
+    """ Add/update newly discovered mote to the database.
+    """
+    identification = _get_mote_ser(mote_ip)
+    coap = Coap(mote_ip)
+    identification = str(coap.get('dev/ser').payload)
+
+    logging.debug('New device found IP={0} ID={1}'.format(mote_ip, identification))
+    if not db.is_device_exists(identification):
+        logging.info('Device not yet registered - {0}'.format(identification))
+        return None
+    db.set_device_ip(identification, mote_ip)
+
+    dev = db.get_device_by_identification(identification)
+    if dev.type == DeviceTypes.UPLUG or dev.type == DeviceTypes.USWITCH:
+        coap.stop_observe('dev/pwr/0/kw')
+        coap.observe('dev/pwr/0/kw', _obs_dev_pwr_n_kw, dev)
+
+    return coap
+
+
 def scan_loop(db, br_ip_address):
     """ Scans local network every 10 second for new devices.
     """
@@ -188,15 +216,7 @@ def scan_loop(db, br_ip_address):
                 mote_ip = result['dest']
                 if mote_ip in _discovered_motes:
                     continue
-
-                # New device found - query it to get the identification no.
-                identification = _get_mote_ser(mote_ip)
-                node_coap = Coap(mote_ip)
-                identification = str(node_coap.get('dev/ser').payload)
-                # Dont destroy the coap object - preserve it for future access.
-                _discovered_motes[mote_ip] = node_coap
-                print 'New device found ', mote_ip, identification
-                db.set_device_ip(identification, mote_ip)
+                _discovered_motes[mote_ip] = _add_mote(mote_ip)
 
         except Exception, e:
             raise
