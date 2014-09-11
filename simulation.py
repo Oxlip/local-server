@@ -7,6 +7,7 @@ import string
 import random
 import time
 import devices
+import options
 from devices import DeviceValueSource
 from datetime import datetime
 
@@ -91,7 +92,7 @@ def initialize(rest_client):
     global _motes
 
     # load devices by querying cloud server
-    devices = rest_client.get_devices()
+    devices = rest_client.get_devices(options.get_hub(wait = True)['identification'])
     for device in devices:
         device_id = device['id']
         device_type = device['type']

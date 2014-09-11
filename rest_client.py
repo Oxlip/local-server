@@ -68,23 +68,33 @@ class RestReq(object):
 
 
 
-class RestClient:
+class RestClient(object):
 
     _api_url = 'http://{ip}/api/v1'.format(ip = REST_SERVER_BASE_IP)
 
     def __getattr__(self, name):
-       names = name.split('_')
+        try:
+            _first = name.index('_')
+            type = name[:_first]
+            _first = _first + 1
 
-       if len(names) != 3:
-          return super(RestClient, self).__getattr__(name)
+            if name.count('_') > 1:
+                _second = name.index('_', _first)
+                parent = name[_first:_second]
+                action = name[_second + 1:]
+            else:
+                parent = name[_first:]
+                action = ''
 
-       return getattr(RestReq(self._api_url, names[1], names[2]), names[0])
+            return getattr(RestReq(self._api_url, parent, action), type)
+        except:
+            raise Exception("RestClient don't have {0} as attribute".format(name))
 
     def __init__(self):
         pass
 
 
-    def hub_connect(hub_identification, authentication_key):
+    def hub_connect(self, hub_identification, authentication_key):
         """
         Makes connection to the server and retrieves the hub information
         (hub_id, channel id for notification).
@@ -95,23 +105,22 @@ class RestClient:
                                                  headers = headers)
         if status_code != requests.codes.ok:
             # TODO - retry before giving up
-            raise uhub_exceptions.ConnectFailedError('Connecting uHub to cloud failed. Status code - {0}'.format(status_code))
+            logging.error(
+                'Connecting uHub to cloud failed. Status code - {0}'.format(status_code)
+            )
+            return None
+        hub['identification'] = hub_identification
+        return hub
 
-        self.hub_id = hub['id']
-        self.channel_id = hub['channel']
-        self.hub_identification = hub_identification
-
-    def get_devices(self, full_refresh=False):
+    def get_devices(self, hub_id, full_refresh=False):
         """
         Makes REST call to server to fetch the device list associated with the user.
         """
-        url = '{base}/hub/{identification}/devices'.format(base=REST_SERVER_BASE, identification=self.hub_identification)
-        r = requests.get(url)
-        if r.status_code != requests.codes.ok:
-            logging.error('Failed to fetch device list from cloud server {0}'.format(r.status_code))
-            return []
 
-        return r.json()['devices']
+        http_status, result = self.get_hub_devices(hub_id)
+        if http_status == requests.codes.ok and 'devices' in result:
+           return result['devices']
+        return []
 
     def send_device_value(self, device_id, time_range, source, value):
         """
@@ -124,18 +133,16 @@ class RestClient:
             'source': source,
             'value': value
         }
-        url = '{base}/device/{device_id}/activity'.format(base=REST_SERVER_BASE, device_id=device_id)
-        r = requests.post(url, data=params)
-
-        return r.status_code == requests.codes.ok
+        http_status, result = self.post_device_activity(device_id, post = params)
+        return http_status == requests.codes.ok
 
 
     def get_user_info(self, username):
-        http_status, result = self.get_user_(username)
+        http_status, result = self.get_user(username)
         return http_status == requests.codes.ok, result
 
 
-    def register_device(self, username, serial_no, device_type, device_name):
+    def register_device(self, username, serial_no, device_type, device_name, hub_id):
         """
         Makes REST call to server to register a device with given username.
         Note - this should be used only for simulation.
@@ -144,9 +151,9 @@ class RestClient:
             'serial_no': serial_no,
             'device_type': device_type,
             'device_name': device_name,
-            'hub_identification': self.hub_identification
+            'hub_identification': hub_id
         }
-        url = '{base}/user/{username}/register_device'.format(base=REST_SERVER_BASE, username=username)
-        r = requests.post(url, data=params)
+        http_status, result = self.post_user_register_device(username, post = params)
 
-        return r.status_code == requests.codes.ok, r.json()
+        return http_status == requests.codes.ok, result
+
