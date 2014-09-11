@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import uobj
 import uswitch
 import logging
@@ -37,9 +38,14 @@ def cli_params():
     return options, args
 
 def load_session_from_hub_id(options):
-    client = RestClient('123234', 'should failed with real auth')
+    client = RestClient(options.hub_id, 'should failed with real auth')
     devices = client.get_devices()
-    print devices
+    hub = { 'identification' : options.hub_id }
+    session = {
+        'devices' : devices,
+        'hub'     : hub
+    }
+    return session
 
 def load_session_from_file():
     _file_path = '/tmp/usim.session'
@@ -64,16 +70,17 @@ def save_session_to_file(session):
         logging.error('Failed to save the session')
 
 def load_session(options):
-    print options
     if options.load_session:
         session = load_session_from_file()
     else:
         session = load_session_from_hub_id(options)
+    return session
 
-def cli_simul(options, args):
-    pass
+def cli_simul(options, args, session):
+    print session
 
 if __name__ == '__main__':
     options, args = cli_params()
-    load_session(options)
-    cli_simul(options, args)
+    session = load_session(options)
+    cli_simul(options, args, session)
+    save_session_to_file(session)
