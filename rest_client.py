@@ -18,11 +18,37 @@ class RestReq(object):
         self.parent = parent
         self.action = action
 
+
+    def url_format(self, id):
+        url = '{base}/{parent}'.format(base = self.base, parent = self.parent)
+        if id != '':
+           url = '{url}/{added}'.format(url = url, added = id)
+        if self.action != '':
+           url = '{url}/{added}'.format(url = url, added = self.action)
+
+        return url
+
+
+    def get(self, id = ''):
+        url = self.url_format(id)
+        req = requests.get(url)
+        http_code = req.status_code
+        try:
+            result = req.json()
+        except:
+            logging.error('Receive non-json result from: {url}'.format(url=url))
+            result = []
+
+        logging.debug('Connect to url:{url} http_code:{status}\n{msg}'.format(
+           url = url,
+           status = http_code,
+           msg = result))
+
+        return http_code, result
+
+
     def post(self, id = '', post = {}, headers = {}):
-        url = '{base}/{parent}/{id}/{action}'.format(base = self.base,
-                                                     parent = self.parent,
-                                                     id = id,
-                                                     action = self.action)
+        url = self.url_format(id)
         logging.debug('Forge url [{url}]'.format(url=url))
         logging.debug('Headers:\n{headers}'.format(headers=headers))
         req = requests.post(url, headers=headers, data=post)
@@ -48,9 +74,17 @@ class RestClient:
 
     def __getattr__(self, name):
        names = name.split('_')
+
+       if len(names) != 3:
+          return super(RestClient, self).__getattr__(name)
+
        return getattr(RestReq(self._api_url, names[1], names[2]), names[0])
 
-    def __init__(self, hub_identification, authentication_key):
+    def __init__(self):
+        pass
+
+
+    def hub_connect(hub_identification, authentication_key):
         """
         Makes connection to the server and retrieves the hub information
         (hub_id, channel id for notification).
@@ -94,6 +128,12 @@ class RestClient:
         r = requests.post(url, data=params)
 
         return r.status_code == requests.codes.ok
+
+
+    def get_user_info(self, username):
+        http_status, result = self.get_user_(username)
+        return http_status == requests.codes.ok, result
+
 
     def register_device(self, username, serial_no, device_type, device_name):
         """
