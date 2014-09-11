@@ -18,6 +18,7 @@ from database import Database, reset_tables
 from rest_client import RestClient
 import tunslip
 import devices
+import options
 import simulation
 
 _border_router_ip = None
@@ -45,19 +46,21 @@ def get_br_ip_address():
             return _border_router_ip
 
 
-def _notification_loop(channel_id):
+def _notification_loop():
     """
     Process push notifications in a loop
     """
     import PubNub
     from devices import handle_server_command
 
+    hub = options.get_hub(wait = True)
+
     # TODO - Replace the publish key and subscribe key
     pubnub = PubNub.Pubnub(publish_key='pub-c-9ff29ff2-1427-4864-bbfa-7d3270a233dc',
                            subscribe_key='sub-c-7e20413a-8d2d-11e3-ae86-02ee2ddab7fe',
                            ssl_on=False)
     pubnub.subscribe({
-        'channel': channel_id,
+        'channel': options.get_hub()['channel'],
         'callback': handle_server_command
     })
 
@@ -98,18 +101,18 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
 
     hub_identity, authentication_key = get_hub_identity()
-    rest_client = RestClient(hub_identity, authentication_key)
+    rest_client = RestClient()
 
     if args.factory_reset:
         logging.info('Resetting device information')
-        reset_tables(hub_identity, rest_client.hub_id)
+        reset_tables(hub_identity, options.get_hub()['id'])
 
     db = Database(rest_client)
     devices.rest_client = rest_client
     devices.db = db
 
     logging.info('Simulation: {0}'.format('on' if args.simulation else 'off'))
-    _greenlets = [gevent.spawn(_notification_loop, rest_client.channel_id)]
+    _greenlets = [gevent.spawn(_notification_loop)]
     _greenlets = []
     if args.simulation:
         devices.simulation_mode = True

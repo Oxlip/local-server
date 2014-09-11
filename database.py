@@ -120,7 +120,10 @@ class Database:
             return
 
         try:
-            clould_dlist = self.rest_client.get_devices()
+            hub = options.get_hub()
+            if hub is None:
+                raise Exception('Try to sync without success to get hub info once')
+            clould_dlist = self.rest_client.get_devices(hub['identification'])
         except Exception, e:
             devices_added, devices_removed = [], []
             logging.error('Failed to sync to cloud server - {0}'.format(e))
