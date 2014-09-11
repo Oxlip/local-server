@@ -23,6 +23,7 @@ def get_hub(wait = False):
         hub_identity, authentication_key = get_hub_identity()
         hub = None
         while hub is None and 'hub' not in options:
-            client.hub_connect(hub_identity, authentication_key)
+            hub = client.hub_connect(hub_identity, authentication_key)
             gevent.sleep(5)
+        options['hub'] = hub
     return options['hub']
