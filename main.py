@@ -2,6 +2,12 @@
 
 """
 The main program which binds everything else.
+
+For RPI, needs: python-enum, python-gevent, python-six, python-sqlalchemy
+python-requests
+iz (you need libnl*)
+pip for wheel, wheel for construct (downloaded)
+pip ipaddress
 """
 import gevent.monkey
 gevent.monkey.patch_all()
@@ -32,17 +38,20 @@ def get_hub_identity():
     return 'I8FJPAN11X', 'AUTH_KEY IS EMPTY'
 
 
-def get_br_ip_address():
+def get_br_ip_address(args):
     """ Helper function to get Border router's IP address.
     """
     global _border_router_ip
     if _border_router_ip:
         return _border_router_ip
-    while True:
-        time.sleep(1)
-        _border_router_ip = tunslip.get_br_ip_address()
-        if _border_router_ip:
-            return _border_router_ip
+    if args.spi:
+        return args.ip
+    else:
+        while True:
+            time.sleep(1)
+            _border_router_ip = tunslip.get_br_ip_address()
+            if _border_router_ip:
+                return _border_router_ip
 
 
 def _notification_loop(channel_id):
@@ -86,6 +95,9 @@ def process_command_line():
     parser.add_argument('--coap-log', default=100, help='Sets coap logging amount.')
     parser.add_argument('--simulation', action='store_true', help='Simulates WSN and does not connect to real WSN.')
     parser.add_argument('--factory-reset', default=0, help='Erases the hub configuration.')
+    parser.add_argument('--spi', action='store_true', help='Use 6lowpan over spi')
+    parser.add_argument('--ip', default='2001:db8:dead:beef::1/64',
+                        help='Provide IP for the device')
     return parser.parse_args()
 
 
@@ -115,11 +127,13 @@ def main():
         devices.simulation_mode = True
         simulation.initialize(rest_client)
         _greenlets.append(gevent.spawn(simulation.simulation_loop))
+    elif args.spi:
+        spilowpan.create_lowpan(ip)
     else:
         _greenlets.append(gevent.spawn(tunslip.tunslip_loop))
-        logging.debug('Border router IP {0}'.format(get_br_ip_address()))
+        logging.debug('Border router IP {0}'.format(get_br_ip_address(args)))
 
-    _greenlets.append(gevent.spawn(devices.scan_loop, db, get_br_ip_address()))
+    _greenlets.append(gevent.spawn(devices.scan_loop, db, get_br_ip_address(args)))
 
     gevent.joinall(_greenlets)
 
