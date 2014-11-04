@@ -156,4 +156,3 @@ class RestClient(object):
         http_status, result = self.post_user_register_device(username, post = params)
 
         return http_status == requests.codes.ok, result
-
